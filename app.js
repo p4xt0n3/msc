@@ -32,6 +32,27 @@ let isPlaying = false;
 let toastTimer;
 let routeHistory = [{ type: 'home' }];
 let routeIndex = 0;
+const accountStorageKey = 'stellarmusic-account';
+const sessionStorageKey = 'stellarmusic-session';
+const legacyAccountStorageKey = 'pulse-account';
+const legacySessionStorageKey = 'pulse-session';
+
+function readAccount() {
+  try { return JSON.parse(localStorage.getItem(accountStorageKey) || localStorage.getItem(legacyAccountStorageKey) || 'null'); } catch { return null; }
+}
+
+function hasSession() {
+  return localStorage.getItem(sessionStorageKey) === 'true' || localStorage.getItem(legacySessionStorageKey) === 'true';
+}
+
+let currentUsername = readAccount()?.username || 'New listener';
+const lyricsPanel = document.querySelector('#lyricsPanel');
+const lyricsContent = document.querySelector('#lyricsContent');
+const lyricsTitle = document.querySelector('#lyricsTitle');
+const lyricsArtist = document.querySelector('#lyricsArtist');
+const lyricsCache = new Map();
+let parsedLyrics = [];
+let activeLyricIndex = -1;
 
 document.querySelectorAll('[data-icon]').forEach((element) => { element.innerHTML = icon(element.dataset.icon); });
 
@@ -46,6 +67,110 @@ function showToast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
 }
+
+async function hashPassword(password) {
+  const bytes = new TextEncoder().encode(password);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function setAccountUser(username) {
+  currentUsername = username || 'New listener';
+  const cleanName = currentUsername.slice(0, 1).toUpperCase() + currentUsername.slice(1);
+  const avatar = cleanName.replace(/[^a-zA-Z0-9]/g, '').slice(0, 2).toUpperCase() || 'NL';
+  document.querySelector('#profileName').textContent = cleanName;
+  document.querySelector('#profileAvatar').textContent = avatar;
+  document.querySelector('#profileStatus').textContent = username ? 'Remembered locally' : 'Free plan';
+}
+
+const authOverlay = document.querySelector('#authOverlay');
+const authForm = document.querySelector('#authForm');
+const authUsername = document.querySelector('#authUsername');
+const authPassword = document.querySelector('#authPassword');
+const authConfirm = document.querySelector('#authConfirm');
+const authConfirmLabel = document.querySelector('#authConfirmLabel');
+const authTitle = document.querySelector('#authTitle');
+const authSubtitle = document.querySelector('#authSubtitle');
+const authSubmit = document.querySelector('#authSubmit');
+const authSwitch = document.querySelector('#authSwitch');
+const authError = document.querySelector('#authError');
+const accountActions = document.querySelector('#accountActions');
+let authMode = 'register';
+
+function openAuth(mode = 'register', required = false) {
+  authMode = mode;
+  const account = readAccount();
+  authOverlay.hidden = false;
+  authOverlay.setAttribute('aria-hidden', 'false');
+  document.querySelector('#authClose').hidden = required;
+  authForm.hidden = mode === 'account';
+  accountActions.hidden = mode !== 'account';
+  authError.textContent = '';
+  if (mode === 'register') {
+    authTitle.textContent = 'Join the rhythm.';
+    authSubtitle.textContent = 'Create an account to save your place and make StellarMusic yours.';
+    authConfirmLabel.hidden = false;
+    authSubmit.innerHTML = 'Create account <span>↗</span>';
+    authSwitch.innerHTML = 'Already have an account? <button type="button" id="authSwitchButton">Sign in</button>';
+  } else if (mode === 'login') {
+    authTitle.textContent = 'Welcome back.';
+    authSubtitle.textContent = `Sign in as ${account?.username || 'a returning listener'} to continue.`;
+    authConfirmLabel.hidden = true;
+    authSubmit.innerHTML = 'Sign in <span>↗</span>';
+    authSwitch.innerHTML = 'New to StellarMusic? <button type="button" id="authSwitchButton">Create an account</button>';
+    authUsername.value = account?.username || '';
+  } else {
+    authTitle.textContent = `Hey, ${currentUsername}.`;
+    authSubtitle.textContent = 'Your account is ready on this browser, so StellarMusic can remember you next time.';
+  }
+  const switchButton = document.querySelector('#authSwitchButton');
+  if (switchButton) switchButton.onclick = () => openAuth(authMode === 'register' ? 'login' : 'register', false);
+  if (mode !== 'account') setTimeout(() => authUsername.focus(), 40);
+}
+
+function closeAuth() {
+  if (!hasSession()) return;
+  authOverlay.hidden = true;
+  authOverlay.setAttribute('aria-hidden', 'true');
+}
+
+authForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  authError.textContent = '';
+  authSubmit.disabled = true;
+  try {
+    const username = authUsername.value.trim();
+    const password = authPassword.value;
+    if (authMode === 'register') {
+      if (password !== authConfirm.value) throw new Error('Your passwords do not match.');
+      if (username.length < 2) throw new Error('Username must be at least 2 characters.');
+      const account = { username, passwordHash: await hashPassword(password) };
+      localStorage.setItem(accountStorageKey, JSON.stringify(account));
+      localStorage.setItem(sessionStorageKey, 'true');
+      setAccountUser(username);
+      closeAuth();
+      renderRoute(routeHistory[routeIndex]);
+      showToast(`Welcome to StellarMusic, ${username}`);
+    } else {
+      const account = readAccount();
+      if (!account || username.toLowerCase() !== account.username.toLowerCase() || await hashPassword(password) !== account.passwordHash) throw new Error('That username or password is not right.');
+      localStorage.setItem(sessionStorageKey, 'true');
+      setAccountUser(account.username);
+      closeAuth();
+      renderRoute(routeHistory[routeIndex]);
+      showToast(`Welcome back, ${account.username}`);
+    }
+  } catch (error) { authError.textContent = error.message; }
+  authSubmit.disabled = false;
+});
+
+document.querySelector('#authClose').addEventListener('click', closeAuth);
+document.querySelector('#profileButton').addEventListener('click', () => openAuth('account', false));
+document.querySelector('#signOutButton').addEventListener('click', () => {
+  localStorage.removeItem(sessionStorageKey);
+  setAccountUser('');
+  openAuth('login', true);
+});
 
 function trackRow(track, index = 0) {
   return `<div class="track ${currentTrack?.id === track.id ? 'active' : ''}" data-track-row="${track.id}">
@@ -77,7 +202,7 @@ function renderHome() {
   const quickTracks = catalogTracks.slice(0, 7);
   const featured = catalogArtists[0];
   const featuredAlbum = featured.albums[0];
-  viewRoot.innerHTML = `<div class="greeting-row"><div><p class="eyebrow">Monday, September 07</p><h1>Good evening, Jordan <span>✦</span></h1></div><button class="icon-button" aria-label="More options">${icon('more-horizontal')}</button></div>
+  viewRoot.innerHTML = `<div class="greeting-row"><div><p class="eyebrow">Monday, September 07</p><h1>Good evening, ${currentUsername} <span>✦</span></h1></div><button class="icon-button" aria-label="More options">${icon('more-horizontal')}</button></div>
     <section class="hero-grid"><article class="hero-card"><div class="hero-content"><span class="eyebrow">Your daily mix</span><h2>Find your<br /><em>frequency.</em></h2><p>A handpicked mix from the artists in your library, refreshed every day.</p><button class="primary-button" data-track="${quickTracks[0].id}">${icon('play-filled')} Play mix</button></div><div class="hero-art" aria-hidden="true"><div class="orb orb-one"></div><div class="orb orb-two"></div><div class="orb orb-three"></div><span class="hero-note note-one">♪</span><span class="hero-note note-two">·</span></div><div class="hero-glow"></div></article>
     <article class="feature-card"><div class="feature-art album-art ${featuredAlbum.artClass}"><span>✦</span></div><div class="feature-copy"><span class="eyebrow">Featured artist</span><h3>${featured.name}</h3><p>${featured.genre}</p><button class="text-button" data-route="artist" data-id="${featured.id}">Open artist ${icon('arrow-up-right')}</button></div></article></section>
     <section class="section-block"><div class="section-heading"><div><span class="eyebrow">Your artists</span><h2>Made for your ears</h2></div><button class="see-all" data-route="artists">See all ${icon('arrow-right')}</button></div><div class="artist-row">${catalogArtists.slice(0, 4).map(artistCard).join('')}</div></section>
@@ -127,10 +252,61 @@ function navigate(route, addHistory = true) {
 function setPlayerMetadata(track) {
   document.querySelector('#nowTitle').textContent = track?.title || 'Choose a song';
   document.querySelector('#nowArtist').textContent = track?.artist || 'Your library';
+  lyricsTitle.textContent = track?.title || 'Lyrics';
+  lyricsArtist.textContent = track?.artist || 'Choose a song';
   const art = document.querySelector('.mini-art');
   art.className = `mini-art ${track?.artClass || 'art-moonlight'}`;
   art.textContent = track?.art || '◐';
   durationLabel.textContent = track?.duration || '0:00';
+  parsedLyrics = [];
+  activeLyricIndex = -1;
+  if (lyricsPanel && !lyricsPanel.hidden) loadLyrics(track);
+}
+
+function parseLrc(text) {
+  const offset = Number(text.match(/\[offset:([-\d]+)\]/i)?.[1] || 0) / 1000;
+  return text.split(/\r?\n/).flatMap((line) => {
+    const timestamps = [...line.matchAll(/\[(\d+):(\d+(?:\.\d+)?)\]/g)];
+    const lyricText = line.replace(/\[\d+:\d+(?:\.\d+)?\]/g, '').trim();
+    return timestamps.map((match) => ({ time: Math.max(0, Number(match[1]) * 60 + Number(match[2]) + offset), text: lyricText || '♪' }));
+  }).filter((line) => line.text).sort((a, b) => a.time - b.time);
+}
+
+function renderLyrics() {
+  if (!parsedLyrics.length) {
+    lyricsContent.innerHTML = `<div class="lyrics-empty"><span>♪</span><p>${currentTrack?.lyrics ? 'No timestamped lyrics found in this file.' : 'Lyrics are not available for this song yet.'}</p></div>`;
+    return;
+  }
+  lyricsContent.innerHTML = parsedLyrics.map((line, index) => `<button class="lyric-line" data-lyric-index="${index}">${line.text}</button>`).join('');
+  syncLyrics(true);
+}
+
+async function loadLyrics(track) {
+  parsedLyrics = [];
+  activeLyricIndex = -1;
+  if (!track) { renderLyrics(); return; }
+  if (!track.lyrics || track.lyrics.includes('YOUR_USERNAME')) { renderLyrics(); return; }
+  if (lyricsCache.has(track.id)) { parsedLyrics = lyricsCache.get(track.id); renderLyrics(); return; }
+  lyricsContent.innerHTML = '<div class="lyrics-loading">Loading lyrics…</div>';
+  try {
+    const response = await fetch(track.lyrics);
+    if (!response.ok) throw new Error('Lyrics file unavailable');
+    parsedLyrics = parseLrc(await response.text());
+    lyricsCache.set(track.id, parsedLyrics);
+    if (currentTrack?.id === track.id) renderLyrics();
+  } catch {
+    lyricsContent.innerHTML = '<div class="lyrics-empty"><span>♪</span><p>Lyrics could not be loaded. Check the .lrc path in catalog.js.</p></div>';
+  }
+}
+
+function syncLyrics(force = false) {
+  if (!parsedLyrics.length) return;
+  let nextIndex = 0;
+  for (let index = 0; index < parsedLyrics.length; index += 1) if (audio.currentTime >= parsedLyrics[index].time) nextIndex = index;
+  if (!force && nextIndex === activeLyricIndex) return;
+  activeLyricIndex = nextIndex;
+  document.querySelectorAll('.lyric-line').forEach((line, index) => line.classList.toggle('active', index === activeLyricIndex));
+  document.querySelector(`.lyric-line[data-lyric-index="${activeLyricIndex}"]`)?.scrollIntoView({ behavior: force ? 'auto' : 'smooth', block: 'center' });
 }
 
 function updatePlayButton() {
@@ -184,7 +360,7 @@ document.querySelector('[data-action="next"]').addEventListener('click', () => n
 searchInput.addEventListener('input', (event) => { const query = event.target.value.trim(); if (query) renderSearch(query); else renderRoute(routeHistory[routeIndex]); });
 document.addEventListener('keydown', (event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); searchInput.focus(); } });
 
-audio.addEventListener('timeupdate', () => { if (!audio.duration) return; const value = (audio.currentTime / audio.duration) * 100; progress.value = value; progress.style.background = `linear-gradient(to right, var(--lime) ${value}%, #3b404a ${value}%)`; elapsedLabel.textContent = formatTime(audio.currentTime); });
+audio.addEventListener('timeupdate', () => { if (!audio.duration) return; const value = (audio.currentTime / audio.duration) * 100; progress.value = value; progress.style.background = `linear-gradient(to right, var(--lime) ${value}%, #3b404a ${value}%)`; elapsedLabel.textContent = formatTime(audio.currentTime); syncLyrics(); });
 audio.addEventListener('loadedmetadata', () => { durationLabel.textContent = formatTime(audio.duration); });
 audio.addEventListener('play', () => { isPlaying = true; updatePlayButton(); });
 audio.addEventListener('pause', () => { isPlaying = false; updatePlayButton(); });
@@ -192,6 +368,31 @@ audio.addEventListener('ended', () => nextTrack(1));
 audio.addEventListener('error', () => { isPlaying = false; updatePlayButton(); showToast('Song unavailable — check the GitHub path'); });
 progress.addEventListener('input', () => { if (audio.duration) audio.currentTime = audio.duration * (Number(progress.value) / 100); const value = Number(progress.value); progress.style.background = `linear-gradient(to right, var(--lime) ${value}%, #3b404a ${value}%)`; elapsedLabel.textContent = formatTime((audio.duration || 252) * value / 100); });
 document.querySelector('.volume-control input').addEventListener('input', (event) => { audio.volume = Number(event.target.value) / 100; event.target.style.background = `linear-gradient(to right, var(--text) ${event.target.value}%, #3b404a ${event.target.value}%)`; });
+document.querySelector('#lyricsButton').addEventListener('click', () => {
+  const opening = lyricsPanel.hidden;
+  lyricsPanel.hidden = !opening;
+  lyricsPanel.setAttribute('aria-hidden', String(!opening));
+  document.querySelector('#lyricsButton').setAttribute('aria-pressed', String(opening));
+  document.querySelector('#lyricsButton').classList.toggle('lyrics-active', opening);
+  if (opening) loadLyrics(currentTrack);
+});
+document.querySelector('#lyricsClose').addEventListener('click', () => {
+  lyricsPanel.hidden = true;
+  lyricsPanel.setAttribute('aria-hidden', 'true');
+  document.querySelector('#lyricsButton').setAttribute('aria-pressed', 'false');
+  document.querySelector('#lyricsButton').classList.remove('lyrics-active');
+});
+lyricsContent.addEventListener('click', (event) => {
+  const line = event.target.closest('[data-lyric-index]');
+  if (!line || !parsedLyrics[Number(line.dataset.lyricIndex)]) return;
+  audio.currentTime = parsedLyrics[Number(line.dataset.lyricIndex)].time;
+  syncLyrics(true);
+});
 
 setPlayerMetadata(null);
+setAccountUser(currentUsername === 'New listener' ? '' : currentUsername);
 renderRoute({ type: 'home' });
+
+if (readAccount() && hasSession()) closeAuth();
+else if (readAccount()) openAuth('login', true);
+else openAuth('register', true);

@@ -1,11 +1,12 @@
 /*
-  Pulse music catalog
+  StellarMusic catalog
   -------------------
   Put your public GitHub repository in MUSIC_REPO, then point each track's
   file at its path inside that repository. Example:
 
   const MUSIC_REPO = 'https://raw.githubusercontent.com/your-name/your-repo/main';
-  src: githubFile('audio/z-j/fan-powers.mp3')
+  src: githubFile('audio/z-j/fan-powers.mp3'),
+  lyrics: githubFile('lyrics/z-j/fanpower.lrc')
 
   GitHub repositories must be public for the browser audio player to reach them.
 */
@@ -19,7 +20,7 @@ const musicCatalog = {
       bio: 'Polished pop, luminous synths, and late-night hooks for moving through the city.',
       albums: [
         { id: 'fan-powers', title: 'Fan Powers', year: '', artClass: 'art-neon', tracks: [
-          { id: 'zj-fan-powers', title: 'Fan Powers', duration: '—', src: githubFile('audio/z-j/fan-powers.mp3') },
+          { id: 'zj-fan-powers', title: 'Fan Powers', duration: '—', src: githubFile('audio/z-j/fan-powers.mp3'), lyrics: githubFile('lyrics/z-j/fanpower.lrc') },
           { id: 'zj-include', title: 'Include', duration: '—', src: githubFile('audio/z-j/include.mp3') },
           { id: 'zj-masses', title: 'Masses', duration: '—', src: githubFile('audio/z-j/masses.mp3') },
           { id: 'zj-excitement', title: 'Excitement', duration: '—', src: githubFile('audio/z-j/excitement.mp3') },

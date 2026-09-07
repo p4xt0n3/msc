@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0b0d12" />
-    <title>Pulse</title>
+    <title>StellarMusic</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0d12'/%3E%3Cpath d='M8 21 12 8h4l-4 13H8Zm8 0 4-13h4l-4 13h-4Z' fill='%23d9f65c'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,7 +16,7 @@
       <aside class="sidebar" aria-label="Primary navigation">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span>pulse</span>
+          <span>StellarMusic</span>
         </div>
 
         <nav class="main-nav">
@@ -51,9 +51,9 @@
             </div>
             <span class="arrow" data-icon="arrow-up-right"></span>
           </div>
-          <button class="profile-card">
-            <span class="avatar">JS</span>
-            <span class="profile-copy"><strong>Jordan Smith</strong><small>Free plan</small></span>
+          <button class="profile-card" id="profileButton">
+            <span class="avatar" id="profileAvatar">NL</span>
+            <span class="profile-copy"><strong id="profileName">New listener</strong><small id="profileStatus">Free plan</small></span>
             <span class="icon" data-icon="more-horizontal"></span>
           </button>
         </div>
@@ -94,12 +94,40 @@
         <div class="progress-row"><span id="elapsed">0:00</span><input type="range" id="progress" min="0" max="100" value="0" aria-label="Song progress" /><span id="duration">0:00</span></div>
       </div>
       <div class="player-actions">
-        <button class="small-control" aria-label="Lyrics"><span data-icon="mic-2"></span></button>
+        <button class="small-control" id="lyricsButton" aria-label="Open lyrics" aria-pressed="false"><span data-icon="mic-2"></span></button>
         <button class="small-control" aria-label="Queue"><span data-icon="list-music"></span></button>
         <div class="volume-control"><span data-icon="volume-2"></span><input type="range" min="0" max="100" value="68" aria-label="Volume" /></div>
         <button class="small-control" aria-label="Expand player"><span data-icon="maximize-2"></span></button>
       </div>
     </footer>
+    <aside class="lyrics-panel" id="lyricsPanel" hidden aria-label="Lyrics">
+      <div class="lyrics-panel-head"><div><span class="eyebrow">Now playing</span><h2 id="lyricsTitle">Lyrics</h2><p id="lyricsArtist">Choose a song</p></div><button class="lyrics-close" id="lyricsClose" aria-label="Close lyrics">×</button></div>
+      <div class="lyrics-content" id="lyricsContent"><div class="lyrics-empty"><span>♪</span><p>Play a song to see its lyrics.</p></div></div>
+    </aside>
+    <section class="auth-overlay" id="authOverlay" hidden aria-hidden="true">
+      <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+        <div class="auth-art">
+          <span class="auth-brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span> StellarMusic</span>
+          <div class="auth-orbit orbit-a"></div><div class="auth-orbit orbit-b"></div><div class="auth-orbit orbit-c"></div>
+          <span class="auth-note">♪</span><span class="auth-art-caption">Your music.<br />Your frequency.</span>
+        </div>
+        <div class="auth-panel">
+          <button class="auth-close" id="authClose" aria-label="Close account window">×</button>
+          <span class="eyebrow">StellarMusic account</span>
+          <h2 id="authTitle">Join the rhythm.</h2>
+          <p id="authSubtitle">Create an account to save your place and make StellarMusic yours.</p>
+          <form id="authForm">
+            <label>Username<input id="authUsername" type="text" autocomplete="username" placeholder="Choose a username" maxlength="24" required /></label>
+            <label>Password<input id="authPassword" type="password" autocomplete="new-password" placeholder="At least 6 characters" minlength="6" required /></label>
+            <label id="authConfirmLabel">Confirm password<input id="authConfirm" type="password" autocomplete="new-password" placeholder="Type it again" minlength="6" required /></label>
+            <button class="auth-submit" type="submit" id="authSubmit">Create account <span>↗</span></button>
+            <p class="auth-switch" id="authSwitch">Already have an account? <button type="button" id="authSwitchButton">Sign in</button></p>
+            <p class="auth-error" id="authError" role="alert"></p>
+          </form>
+          <div class="account-actions" id="accountActions" hidden><button class="auth-submit" id="signOutButton">Sign out <span>↗</span></button><p class="local-note">This account is saved locally in this browser.</p></div>
+        </div>
+      </div>
+    </section>
     <div class="toast" id="toast" role="status"></div>
     <audio id="audioEngine" preload="metadata"></audio>
     <script src="catalog.js"></script>
