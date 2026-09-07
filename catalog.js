@@ -1,7 +1,7 @@
 /*
   StellarMusic catalog
   -------------------
-  The catalog only describes the music shown in the app. Tracks without an
+  The catalog describes the music shown in the app. Tracks without an
   imported recording are given playable demo audio by app.js automatically.
 */
 const musicCatalog = {
@@ -11,12 +11,12 @@ const musicCatalog = {
       bio: 'Polished pop, luminous synths, and late-night hooks for moving through the city.',
       albums: [
         { id: 'fan-powers', title: 'Fan Powers', year: '', artClass: 'art-neon', tracks: [
-          { id: 'zj-fan-powers', title: 'Fan Powers', duration: '—' },
-          { id: 'zj-include', title: 'Include', duration: '—' },
-          { id: 'zj-masses', title: 'Masses', duration: '—' },
-          { id: 'zj-excitement', title: 'Excitement', duration: '—' },
-          { id: 'zj-very-nice-to-see-you', title: 'Very nice to See You', duration: '—' },
-          { id: 'zj-in-the-night', title: 'In The Night', duration: '—' }
+          { id: 'zj-fan-powers', title: 'Fan Powers', duration: '—', src: './fanpowers.mp3' },
+          { id: 'zj-include', title: 'Include', duration: '—', src: './include.mp3' },
+          { id: 'zj-masses', title: 'Masses', duration: '—', src: './masses.mp3' },
+          { id: 'zj-excitement', title: 'Excitement', duration: '—', src: './excitement.mp3' },
+          { id: 'zj-very-nice-to-see-you', title: 'Very nice to See You', duration: '—', src: './vntsy.mp3' },
+          { id: 'zj-in-the-night', title: 'In The Night', duration: '—', src: './inthenight.mp3' }
         ] }
       ]
     },
