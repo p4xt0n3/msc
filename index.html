@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0d12" />
+    <title>Pulse</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0d12'/%3E%3Cpath d='M8 21 12 8h4l-4 13H8Zm8 0 4-13h4l-4 13h-4Z' fill='%23d9f65c'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>pulse</span>
+        </div>
+
+        <nav class="main-nav">
+          <p class="nav-label">Menu</p>
+          <button class="nav-item active" data-view="Home">
+            <span class="icon" data-icon="home"></span><span>Home</span>
+          </button>
+          <button class="nav-item" data-view="Discover">
+            <span class="icon" data-icon="compass"></span><span>Discover</span>
+          </button>
+          <button class="nav-item" data-view="Radio">
+            <span class="icon" data-icon="radio"></span><span>Radio</span>
+          </button>
+          <p class="nav-label library-label">Your library</p>
+          <button class="nav-item" data-view="Liked songs">
+            <span class="icon" data-icon="heart"></span><span>Liked songs</span><span class="nav-count">24</span>
+          </button>
+          <button class="nav-item" data-view="Albums">
+            <span class="icon" data-icon="disc"></span><span>Albums</span>
+          </button>
+          <button class="nav-item" data-view="Artists">
+            <span class="icon" data-icon="users"></span><span>Artists</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-bottom">
+          <div class="upgrade-card">
+            <span class="upgrade-icon" data-icon="sparkles"></span>
+            <div>
+              <strong>Go premium</strong>
+              <span>Listen without limits</span>
+            </div>
+            <span class="arrow" data-icon="arrow-up-right"></span>
+          </div>
+          <button class="profile-card">
+            <span class="avatar">JS</span>
+            <span class="profile-copy"><strong>Jordan Smith</strong><small>Free plan</small></span>
+            <span class="icon" data-icon="more-horizontal"></span>
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="history-controls">
+            <button class="round-button" aria-label="Go back" data-action="back"><span data-icon="chevron-left"></span></button>
+            <button class="round-button muted-button" aria-label="Go forward" data-action="forward"><span data-icon="chevron-right"></span></button>
+          </div>
+          <label class="search-box">
+            <span data-icon="search"></span>
+            <input id="searchInput" type="search" placeholder="Search for songs, artists, albums" autocomplete="off" />
+            <kbd>⌘ K</kbd>
+          </label>
+          <button class="notification-button" aria-label="Notifications"><span data-icon="bell"></span><b></b></button>
+        </header>
+
+        <section class="content-wrap" id="contentWrap"><div id="viewRoot"></div></section>
+      </main>
+    </div>
+
+    <footer class="player-bar" aria-label="Music player">
+      <div class="now-playing">
+        <div class="mini-art art-moonlight">◐</div>
+        <div class="now-copy"><strong id="nowTitle">Choose a song</strong><span id="nowArtist">Your library</span></div>
+        <button class="player-heart" aria-label="Add to liked songs"><span data-icon="heart"></span></button>
+      </div>
+      <div class="player-center">
+        <div class="transport-controls">
+          <button aria-label="Shuffle" class="small-control"><span data-icon="shuffle"></span></button>
+          <button aria-label="Previous" class="small-control" data-action="previous"><span data-icon="skip-back"></span></button>
+          <button aria-label="Play" class="play-control" id="playButton"><span data-icon="play-filled"></span></button>
+          <button aria-label="Next" class="small-control" data-action="next"><span data-icon="skip-forward"></span></button>
+          <button aria-label="Repeat" class="small-control"><span data-icon="repeat"></span></button>
+        </div>
+        <div class="progress-row"><span id="elapsed">0:00</span><input type="range" id="progress" min="0" max="100" value="0" aria-label="Song progress" /><span id="duration">0:00</span></div>
+      </div>
+      <div class="player-actions">
+        <button class="small-control" aria-label="Lyrics"><span data-icon="mic-2"></span></button>
+        <button class="small-control" aria-label="Queue"><span data-icon="list-music"></span></button>
+        <div class="volume-control"><span data-icon="volume-2"></span><input type="range" min="0" max="100" value="68" aria-label="Volume" /></div>
+        <button class="small-control" aria-label="Expand player"><span data-icon="maximize-2"></span></button>
+      </div>
+    </footer>
+    <div class="toast" id="toast" role="status"></div>
+    <audio id="audioEngine" preload="metadata"></audio>
+    <script src="catalog.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
