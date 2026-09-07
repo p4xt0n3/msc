@@ -11,7 +11,7 @@ const musicCatalog = {
       bio: 'Polished pop, luminous synths, and late-night hooks for moving through the city.',
       albums: [
         { id: 'fan-powers', title: 'Fan Powers', year: '', artClass: 'art-neon', tracks: [
-          { id: 'zj-fan-powers', title: 'Fan Powers', duration: '—', src: './fanpowers.mp3' },
+          { id: 'zj-fan-powers', title: 'Fan Powers', duration: '—', src: './fanpowers.mp3', lyrics: './fanpowers.lrc' },
           { id: 'zj-include', title: 'Include', duration: '—', src: './include.mp3' },
           { id: 'zj-masses', title: 'Masses', duration: '—', src: './masses.mp3' },
           { id: 'zj-excitement', title: 'Excitement', duration: '—', src: './excitement.mp3' },
