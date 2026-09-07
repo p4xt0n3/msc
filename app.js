@@ -53,6 +53,7 @@ const lyricsArtist = document.querySelector('#lyricsArtist');
 const lyricsCache = new Map();
 let parsedLyrics = [];
 let activeLyricIndex = -1;
+const demoAudioCache = new Map();
 
 document.querySelectorAll('[data-icon]').forEach((element) => { element.innerHTML = icon(element.dataset.icon); });
 
@@ -285,7 +286,7 @@ async function loadLyrics(track) {
   parsedLyrics = [];
   activeLyricIndex = -1;
   if (!track) { renderLyrics(); return; }
-  if (!track.lyrics || track.lyrics.includes('YOUR_USERNAME')) { renderLyrics(); return; }
+  if (!track.lyrics) { renderLyrics(); return; }
   if (lyricsCache.has(track.id)) { parsedLyrics = lyricsCache.get(track.id); renderLyrics(); return; }
   lyricsContent.innerHTML = '<div class="lyrics-loading">Loading lyrics…</div>';
   try {
@@ -295,7 +296,7 @@ async function loadLyrics(track) {
     lyricsCache.set(track.id, parsedLyrics);
     if (currentTrack?.id === track.id) renderLyrics();
   } catch {
-    lyricsContent.innerHTML = '<div class="lyrics-empty"><span>♪</span><p>Lyrics could not be loaded. Check the .lrc path in catalog.js.</p></div>';
+    lyricsContent.innerHTML = '<div class="lyrics-empty"><span>♪</span><p>Lyrics could not be loaded for this song.</p></div>';
   }
 }
 
@@ -313,6 +314,74 @@ function updatePlayButton() {
   document.querySelector('#playButton').innerHTML = isPlaying ? '<span class="pause-bars"><i></i><i></i></span>' : icon('play-filled');
 }
 
+function trackSeed(track) {
+  return [...track.id].reduce((total, character) => ((total * 31) + character.charCodeAt(0)) >>> 0, 7);
+}
+
+function midiFrequency(note) {
+  return 440 * (2 ** ((note - 69) / 12));
+}
+
+function createDemoAudio(track) {
+  const sampleRate = 22050;
+  const seconds = 24;
+  const frameCount = sampleRate * seconds;
+  const samples = new Int16Array(frameCount * 2);
+  const seed = trackSeed(track);
+  const tempo = 88 + (seed % 20);
+  const beat = 60 / tempo;
+  const root = 48 + (seed % 8);
+  const chordSteps = [0, 3, 7, 10];
+
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    const time = frame / sampleRate;
+    const beatIndex = Math.floor(time / beat);
+    const beatTime = time % beat;
+    const bar = Math.floor(beatIndex / 4);
+    const chordRoot = root + chordSteps[bar % chordSteps.length];
+    const bass = Math.sin(time * Math.PI * 2 * midiFrequency(chordRoot - 12)) * 0.2;
+    const pad = (Math.sin(time * Math.PI * 2 * midiFrequency(chordRoot + 12))
+      + Math.sin(time * Math.PI * 2 * midiFrequency(chordRoot + 16))
+      + Math.sin(time * Math.PI * 2 * midiFrequency(chordRoot + 19))) * 0.055;
+    const arpeggioNote = chordRoot + [12, 16, 19, 24][beatIndex % 4];
+    const arpeggio = Math.sin(time * Math.PI * 2 * midiFrequency(arpeggioNote)) * Math.max(0, 1 - (beatTime / beat)) * 0.13;
+    const kick = beatIndex % 4 === 0 ? Math.sin(beatTime * Math.PI * 2 * (72 - beatTime * 45)) * Math.exp(-beatTime * 18) * 0.35 : 0;
+    const snareBeat = beatIndex % 4 === 2;
+    const snareNoise = Math.sin(frame * 17.31) * Math.sin(frame * 0.071) * Math.exp(-beatTime * 30);
+    const snare = snareBeat ? snareNoise * 0.12 : 0;
+    const fade = Math.min(1, time * 2) * Math.min(1, (seconds - time) * 2);
+    const value = Math.max(-1, Math.min(1, (bass + pad + arpeggio + kick + snare) * fade));
+    const sample = Math.round(value * 32767);
+    samples[frame * 2] = sample;
+    samples[frame * 2 + 1] = Math.round(sample * 0.97);
+  }
+
+  const wav = new ArrayBuffer(44 + samples.byteLength);
+  const view = new DataView(wav);
+  const writeText = (offset, text) => [...text].forEach((character, index) => view.setUint8(offset + index, character.charCodeAt(0)));
+  writeText(0, 'RIFF');
+  view.setUint32(4, 36 + samples.byteLength, true);
+  writeText(8, 'WAVE');
+  writeText(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 2, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 4, true);
+  view.setUint16(32, 4, true);
+  view.setUint16(34, 16, true);
+  writeText(36, 'data');
+  view.setUint32(40, samples.byteLength, true);
+  new Int16Array(wav, 44).set(samples);
+  return URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
+}
+
+function getTrackAudioSource(track) {
+  if (track.src) return track.src;
+  if (!demoAudioCache.has(track.id)) demoAudioCache.set(track.id, createDemoAudio(track));
+  return demoAudioCache.get(track.id);
+}
+
 async function playTrack(trackOrId, queue = null) {
   const track = typeof trackOrId === 'string' ? findTrack(trackOrId) : trackOrId;
   if (!track) return;
@@ -320,8 +389,7 @@ async function playTrack(trackOrId, queue = null) {
   else { currentQueue = catalogTracks; currentQueueIndex = currentQueue.findIndex((item) => item.id === track.id); }
   currentTrack = track;
   setPlayerMetadata(track);
-  if (!track.src || track.src.includes('YOUR_USERNAME')) { isPlaying = false; updatePlayButton(); renderRoute(routeHistory[routeIndex]); showToast('Add your GitHub audio URL in catalog.js'); return; }
-  audio.src = track.src;
+  audio.src = getTrackAudioSource(track);
   audio.load();
   try { await audio.play(); isPlaying = true; updatePlayButton(); renderRoute(routeHistory[routeIndex]); showToast(`Playing ${track.title}`); }
   catch { isPlaying = false; updatePlayButton(); showToast('This song could not be loaded'); }
@@ -329,7 +397,6 @@ async function playTrack(trackOrId, queue = null) {
 
 function togglePlayback() {
   if (!currentTrack) { playTrack(catalogTracks[0]); return; }
-  if (!audio.src || audio.src.includes('YOUR_USERNAME')) { playTrack(currentTrack); return; }
   if (audio.paused) audio.play().then(() => { isPlaying = true; updatePlayButton(); }).catch(() => showToast('This song could not be loaded'));
   else { audio.pause(); isPlaying = false; updatePlayButton(); }
 }
@@ -365,7 +432,7 @@ audio.addEventListener('loadedmetadata', () => { durationLabel.textContent = for
 audio.addEventListener('play', () => { isPlaying = true; updatePlayButton(); });
 audio.addEventListener('pause', () => { isPlaying = false; updatePlayButton(); });
 audio.addEventListener('ended', () => nextTrack(1));
-audio.addEventListener('error', () => { isPlaying = false; updatePlayButton(); showToast('Song unavailable — check the GitHub path'); });
+audio.addEventListener('error', () => { isPlaying = false; updatePlayButton(); showToast('This song could not be loaded'); });
 progress.addEventListener('input', () => { if (audio.duration) audio.currentTime = audio.duration * (Number(progress.value) / 100); const value = Number(progress.value); progress.style.background = `linear-gradient(to right, var(--lime) ${value}%, #3b404a ${value}%)`; elapsedLabel.textContent = formatTime((audio.duration || 252) * value / 100); });
 document.querySelector('.volume-control input').addEventListener('input', (event) => { audio.volume = Number(event.target.value) / 100; event.target.style.background = `linear-gradient(to right, var(--text) ${event.target.value}%, #3b404a ${event.target.value}%)`; });
 document.querySelector('#lyricsButton').addEventListener('click', () => {
