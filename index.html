@@ -128,6 +128,16 @@
         </div>
       </div>
     </section>
+    <section class="secret-song-overlay" id="secretSongOverlay" hidden aria-hidden="true">
+      <div class="secret-song-modal" role="dialog" aria-modal="true" aria-labelledby="secretSongTitle">
+        <button class="secret-song-close" id="secretSongClose" aria-label="Close secret song">×</button>
+        <span class="eyebrow">Hidden track</span>
+        <div class="secret-song-art">DF</div>
+        <h2 id="secretSongTitle">Defiance</h2>
+        <p>Found between the lines.</p>
+        <button class="primary-button secret-song-play" id="playDefianceButton" data-secret-track="defiance">▶ <span>Play Defiance</span></button>
+      </div>
+    </section>
     <div class="toast" id="toast" role="status"></div>
     <audio id="audioEngine" preload="metadata"></audio>
     <script src="catalog.js"></script>

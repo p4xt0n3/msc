@@ -11,7 +11,7 @@ const musicCatalog = {
       bio: 'Polished pop, luminous synths, and late-night hooks for moving through the city.',
       albums: [
         { id: 'fan-powers', title: 'Fan Powers', year: '', artClass: 'art-neon', tracks: [
-          { id: 'zj-fan-powers', title: 'Fan Powers', duration: '—', src: './fanpowers.mp3' },
+          { id: 'zj-fan-powers', title: 'Fan Powers', duration: '—', src: './fanpowers.mp3', lyrics: './fanpowers.lrc' },
           { id: 'zj-include', title: 'Include', duration: '—', src: './include.mp3' },
           { id: 'zj-masses', title: 'Masses', duration: '—', src: './masses.mp3' },
           { id: 'zj-excitement', title: 'Excitement', duration: '—', src: './excitement.mp3' },
@@ -64,20 +64,7 @@ const musicCatalog = {
 };
 
 const catalogArtists = musicCatalog.artists;
-function normalizedLyricsPath(track) {
-  const sourceName = (track.src || track.title).split('/').pop().replace(/\.[^.]+$/, '');
-  return `./${sourceName.toLowerCase().replace(/\s+/g, '')}.lrc`;
-}
-
-const catalogTracks = catalogArtists.flatMap((artist) => artist.albums.flatMap((album) => album.tracks.map((track) => ({
-  ...track,
-  lyrics: normalizedLyricsPath(track),
-  artist: artist.name,
-  artistId: artist.id,
-  album: album.title,
-  albumId: album.id,
-  artClass: album.artClass
-}))));
+const catalogTracks = catalogArtists.flatMap((artist) => artist.albums.flatMap((album) => album.tracks.map((track) => ({ ...track, artist: artist.name, artistId: artist.id, album: album.title, albumId: album.id, artClass: album.artClass }))));
 
 function findArtist(id) { return catalogArtists.find((artist) => artist.id === id); }
 function findAlbum(id) { return catalogArtists.flatMap((artist) => artist.albums).find((album) => album.id === id); }

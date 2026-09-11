@@ -32,6 +32,17 @@ let isPlaying = false;
 let toastTimer;
 let routeHistory = [{ type: 'home' }];
 let routeIndex = 0;
+const secretTrack = {
+  id: 'defiance',
+  title: 'Defiance',
+  artist: 'Hidden track',
+  album: 'Secret songs',
+  duration: '—',
+  src: './defiance.mp3',
+  artClass: 'art-defiance',
+  art: 'DF'
+};
+let secretEnterCount = 0;
 const accountStorageKey = 'stellarmusic-account';
 const sessionStorageKey = 'stellarmusic-session';
 const legacyAccountStorageKey = 'pulse-account';
@@ -50,6 +61,7 @@ const lyricsPanel = document.querySelector('#lyricsPanel');
 const lyricsContent = document.querySelector('#lyricsContent');
 const lyricsTitle = document.querySelector('#lyricsTitle');
 const lyricsArtist = document.querySelector('#lyricsArtist');
+const secretSongOverlay = document.querySelector('#secretSongOverlay');
 const lyricsCache = new Map();
 let parsedLyrics = [];
 let activeLyricIndex = -1;
@@ -67,6 +79,17 @@ function showToast(message) {
   toast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+function openSecretSong() {
+  secretSongOverlay.hidden = false;
+  secretSongOverlay.setAttribute('aria-hidden', 'false');
+  document.querySelector('#playDefianceButton').focus();
+}
+
+function closeSecretSong() {
+  secretSongOverlay.hidden = true;
+  secretSongOverlay.setAttribute('aria-hidden', 'true');
 }
 
 async function hashPassword(password) {
@@ -408,6 +431,9 @@ function nextTrack(direction = 1) {
 }
 
 document.addEventListener('click', (event) => {
+  const secretTrackTarget = event.target.closest('[data-secret-track]');
+  if (secretTrackTarget) { closeSecretSong(); playTrack(secretTrack); return; }
+  if (event.target.closest('#secretSongClose') || event.target === secretSongOverlay) { closeSecretSong(); return; }
   const trackTarget = event.target.closest('[data-track]');
   if (trackTarget) { const scope = trackTarget.closest('.album-songs, .artist-hero, .artist-hero + .section-block'); const queue = scope ? [...catalogTracks] : null; playTrack(trackTarget.dataset.track, queue); return; }
   const routeTarget = event.target.closest('[data-route]');
@@ -424,7 +450,20 @@ document.addEventListener('click', (event) => {
 document.querySelector('#playButton').addEventListener('click', togglePlayback);
 document.querySelector('[data-action="previous"]').addEventListener('click', () => nextTrack(-1));
 document.querySelector('[data-action="next"]').addEventListener('click', () => nextTrack(1));
-searchInput.addEventListener('input', (event) => { const query = event.target.value.trim(); if (query) renderSearch(query); else renderRoute(routeHistory[routeIndex]); });
+searchInput.addEventListener('input', (event) => {
+  const query = event.target.value.trim();
+  secretEnterCount = 0;
+  if (query.toLowerCase() === 'g') viewRoot.innerHTML = '';
+  else if (query) renderSearch(query);
+  else renderRoute(routeHistory[routeIndex]);
+});
+searchInput.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+  if (searchInput.value.trim().toLowerCase() !== 'g') { secretEnterCount = 0; return; }
+  event.preventDefault();
+  secretEnterCount += 1;
+  if (secretEnterCount === 3) { secretEnterCount = 0; openSecretSong(); }
+});
 document.addEventListener('keydown', (event) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); searchInput.focus(); } });
 
 audio.addEventListener('timeupdate', () => { if (!audio.duration) return; const value = (audio.currentTime / audio.duration) * 100; progress.value = value; progress.style.background = `linear-gradient(to right, var(--lime) ${value}%, #3b404a ${value}%)`; elapsedLabel.textContent = formatTime(audio.currentTime); syncLyrics(); });
