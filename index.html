@@ -19,6 +19,12 @@
           <span>StellarMusic</span>
         </div>
 
+        <form class="youtube-import" id="youtubeForm">
+          <div class="youtube-import-heading"><span class="youtube-mark">▶</span><div><strong>Video audio</strong><small>Play video links like songs</small></div></div>
+          <div class="youtube-input-row"><input id="youtubeUrl" type="url" placeholder="Paste a video link" aria-label="Video link" autocomplete="off" required /><button type="submit" id="youtubeSubmit" aria-label="Play video link">↗</button></div>
+          <p class="youtube-status" id="youtubeStatus" aria-live="polite"></p>
+        </form>
+
         <nav class="main-nav">
           <p class="nav-label">Menu</p>
           <button class="nav-item active" data-view="Home">
@@ -29,6 +35,9 @@
           </button>
           <button class="nav-item" data-view="Radio">
             <span class="icon" data-icon="radio"></span><span>Radio</span>
+          </button>
+          <button class="nav-item" data-view="History">
+            <span class="icon" data-icon="history"></span><span>History</span>
           </button>
           <p class="nav-label library-label">Your library</p>
           <button class="nav-item" data-view="Liked songs">
@@ -85,11 +94,11 @@
       </div>
       <div class="player-center">
         <div class="transport-controls">
-          <button aria-label="Shuffle" class="small-control"><span data-icon="shuffle"></span></button>
+          <button aria-label="Random mode" title="Random mode" class="small-control" id="randomButton" aria-pressed="false"><span data-icon="shuffle"></span></button>
           <button aria-label="Previous" class="small-control" data-action="previous"><span data-icon="skip-back"></span></button>
           <button aria-label="Play" class="play-control" id="playButton"><span data-icon="play-filled"></span></button>
           <button aria-label="Next" class="small-control" data-action="next"><span data-icon="skip-forward"></span></button>
-          <button aria-label="Repeat" class="small-control"><span data-icon="repeat"></span></button>
+          <button aria-label="Loop mode" title="Loop mode" class="small-control" id="loopButton" aria-pressed="false"><span data-icon="repeat"></span></button>
         </div>
         <div class="progress-row"><span id="elapsed">0:00</span><input type="range" id="progress" min="0" max="100" value="0" aria-label="Song progress" /><span id="duration">0:00</span></div>
       </div>
@@ -128,19 +137,11 @@
         </div>
       </div>
     </section>
-    <section class="secret-song-overlay" id="secretSongOverlay" hidden aria-hidden="true">
-      <div class="secret-song-modal" role="dialog" aria-modal="true" aria-labelledby="secretSongTitle">
-        <button class="secret-song-close" id="secretSongClose" aria-label="Close secret song">×</button>
-        <span class="eyebrow">Hidden track</span>
-        <div class="secret-song-art">DF</div>
-        <h2 id="secretSongTitle">Defiance</h2>
-        <p>Found between the lines.</p>
-        <button class="primary-button secret-song-play" id="playDefianceButton" data-secret-track="defiance">▶ <span>Play Defiance</span></button>
-      </div>
-    </section>
     <div class="toast" id="toast" role="status"></div>
+    <div class="youtube-player-host" id="youtubePlayerHost" aria-hidden="true"><div id="youtubePlayer"></div><iframe id="externalVideoPlayer" hidden title="External video player" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
     <audio id="audioEngine" preload="metadata"></audio>
     <script src="catalog.js"></script>
     <script src="app.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
   </body>
 </html>
