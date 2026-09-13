@@ -15,13 +15,14 @@
     <div class="app-shell">
       <aside class="sidebar" aria-label="Primary navigation">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="brand-mark" id="brandMark" aria-hidden="true"><i></i><i></i><i></i></span>
           <span>StellarMusic</span>
+          <div class="abstract-chat" id="abstractChat" hidden><span id="abstractChatText"></span></div>
         </div>
 
         <form class="youtube-import" id="youtubeForm">
           <div class="youtube-import-heading"><span class="youtube-mark">▶</span><div><strong>Video audio</strong><small>Play video links like songs</small></div></div>
-          <div class="youtube-input-row"><input id="youtubeUrl" type="url" placeholder="Paste a video link" aria-label="Video link" autocomplete="off" required /><button type="submit" id="youtubeSubmit" aria-label="Play video link">↗</button></div>
+          <div class="youtube-input-row"><input id="youtubeUrl" type="text" placeholder="Paste a video link" aria-label="Video link" autocomplete="off" required /><button type="submit" id="youtubeSubmit" aria-label="Play video link">↗</button></div>
           <p class="youtube-status" id="youtubeStatus" aria-live="polite"></p>
         </form>
 
@@ -75,18 +76,20 @@
             <button class="round-button muted-button" aria-label="Go forward" data-action="forward"><span data-icon="chevron-right"></span></button>
           </div>
           <label class="search-box">
-            <span data-icon="search"></span>
+            <span data-icon="search" id="searchSubmit" role="button" tabindex="0" aria-label="Search"></span>
             <input id="searchInput" type="search" placeholder="Search for songs, artists, albums" autocomplete="off" />
             <kbd>⌘ K</kbd>
           </label>
           <button class="notification-button" aria-label="Notifications"><span data-icon="bell"></span><b></b></button>
+          <button class="notification-button secret-button" id="secretButton" aria-label="Open secret songs" title="Secret songs"><span data-icon="dharma"></span></button>
         </header>
 
         <section class="content-wrap" id="contentWrap"><div id="viewRoot"></div></section>
       </main>
     </div>
 
-    <footer class="player-bar" aria-label="Music player">
+    <footer class="player-bar" id="playerBar" aria-label="Music player">
+      <div class="player-visualizer" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="now-playing">
         <div class="mini-art art-moonlight">◐</div>
         <div class="now-copy"><strong id="nowTitle">Choose a song</strong><span id="nowArtist">Your library</span></div>
@@ -113,6 +116,24 @@
       <div class="lyrics-panel-head"><div><span class="eyebrow">Now playing</span><h2 id="lyricsTitle">Lyrics</h2><p id="lyricsArtist">Choose a song</p></div><button class="lyrics-close" id="lyricsClose" aria-label="Close lyrics">×</button></div>
       <div class="lyrics-content" id="lyricsContent"><div class="lyrics-empty"><span>♪</span><p>Play a song to see its lyrics.</p></div></div>
     </aside>
+    <section class="secrets-overlay" id="secretsOverlay" hidden aria-hidden="true">
+      <div class="secrets-modal" role="dialog" aria-modal="true" aria-labelledby="secretsTitle">
+        <div class="secrets-modal-head"><div><span class="eyebrow">Hidden collection</span><h2 id="secretsTitle">Secret collection</h2><p>Tracks and wallpapers by P4XT0N</p></div><button class="secrets-close" id="secretClose" aria-label="Close secret collection">×</button></div>
+        <section class="secret-section"><div class="secret-section-heading"><span class="eyebrow">Songs</span><span class="secret-section-count">5 tracks</span></div><div class="secret-list" id="secretList"></div></section>
+        <section class="secret-section"><div class="secret-section-heading"><span class="eyebrow">Wallpapers</span><span class="secret-section-count">5 images</span></div><div class="secret-wallpaper-grid" id="secretWallpaperList"></div></section>
+      </div>
+    </section>
+    <section class="secret-password-overlay" id="secretPasswordOverlay" hidden aria-hidden="true">
+      <div class="secret-password-modal" role="dialog" aria-modal="true" aria-labelledby="secretPasswordTitle">
+        <button class="secrets-close" id="secretPasswordClose" aria-label="Close password keypad">×</button>
+        <span class="eyebrow">Locked wallpapers</span><h2 id="secretPasswordTitle">Enter the key</h2><p>Unlock all five hidden wallpapers.</p>
+        <div class="secret-password-dots" id="secretPasswordDots" aria-label="Password entry"></div>
+        <div class="secret-keypad" id="secretKeypad"><button type="button" data-secret-key="1">1</button><button type="button" data-secret-key="2">2</button><button type="button" data-secret-key="3">3</button><button type="button" data-secret-key="4">4</button><button type="button" data-secret-key="5">5</button><button type="button" data-secret-key="6">6</button><button type="button" data-secret-key="7">7</button><button type="button" data-secret-key="8">8</button><button type="button" data-secret-key="9">9</button><button type="button" data-secret-key="clear">C</button><button type="button" data-secret-key="0">0</button><button type="button" data-secret-key="backspace">⌫</button></div>
+        <p class="secret-password-status" id="secretPasswordStatus" aria-live="polite">Use the keypad or your keyboard.</p>
+      </div>
+    </section>
+    <div class="infinity-reveal" id="infinityReveal" hidden aria-hidden="true"><span>∞</span></div>
+    <div class="abstract-hunt-overlay" id="abstractHuntOverlay" hidden aria-hidden="true"><button class="abstract-hunt-close" id="abstractHuntClose" aria-label="Exit Abstract chase">×</button></div>
     <section class="auth-overlay" id="authOverlay" hidden aria-hidden="true">
       <div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
         <div class="auth-art">
@@ -139,8 +160,9 @@
     </section>
     <div class="toast" id="toast" role="status"></div>
     <div class="youtube-player-host" id="youtubePlayerHost" aria-hidden="true"><div id="youtubePlayer"></div><iframe id="externalVideoPlayer" hidden title="External video player" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
-    <audio id="audioEngine" preload="metadata"></audio>
+    <audio id="audioEngine" preload="metadata" crossorigin="anonymous"></audio>
     <script src="catalog.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
     <script src="app.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
   </body>
