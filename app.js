@@ -128,6 +128,7 @@ const radioStations = [
   },
 ].map((station) => ({ ...station, radio: true }));
 const radioStationsById = new Map(radioStations.map((station) => [station.id, station]));
+const RADIO_BROWSER_MIRRORS = ['https://de1.api.radio-browser.info/json', 'https://fi1.api.radio-browser.info/json'];
 let chineseRadioStations = [];
 let chineseRadioLoading = true;
 let chineseRadioError = '';
@@ -284,12 +285,14 @@ function renderSecretSongs() {
 function renderSecretWallpapers() {
   if (!secretWallpaperList) return;
   const unlocked = areSecretWallpapersUnlocked();
-  secretWallpaperList.innerHTML = secretWallpapers.map((wallpaper) => `<button class="secret-wallpaper ${unlocked ? 'unlocked' : 'locked'}" data-secret-wallpaper="${wallpaper.id}" aria-label="${unlocked ? `Set ${escapeHtml(wallpaper.title)}` : `Unlock ${escapeHtml(wallpaper.title)}`} wallpaper"><span class="wallpaper-frame ${unlocked ? '' : 'wallpaper-locked-art'}" data-file="${escapeHtml(wallpaper.file)}">${unlocked ? `<img src="./${escapeHtml(wallpaper.file)}" alt="${escapeHtml(wallpaper.title)} wallpaper" loading="lazy" onerror="this.hidden=true;this.parentElement.classList.add('missing')" /><span>Wallpaper file not found</span>` : '<span class="wallpaper-lock-mark">?</span>'}</span><strong>${escapeHtml(wallpaper.title)}</strong><small>${unlocked ? escapeHtml(wallpaper.file) : 'Locked · enter password'}</small></button>`).join('');
+  const defaultWallpaper = `<button class="secret-wallpaper unlocked" data-secret-wallpaper="default" aria-label="Restore the default page background"><span class="wallpaper-frame wallpaper-default-art"><span class="wallpaper-default-mark">Default</span></span><strong>Default</strong><small>Page background</small></button>`;
+  const imageWallpapers = secretWallpapers.map((wallpaper) => `<button class="secret-wallpaper ${unlocked ? 'unlocked' : 'locked'}" data-secret-wallpaper="${wallpaper.id}" aria-label="${unlocked ? `Set ${escapeHtml(wallpaper.title)}` : `Unlock ${escapeHtml(wallpaper.title)}`} wallpaper"><span class="wallpaper-frame ${unlocked ? '' : 'wallpaper-locked-art'}" data-file="${escapeHtml(wallpaper.file)}">${unlocked ? `<img src="./${escapeHtml(wallpaper.file)}" alt="${escapeHtml(wallpaper.title)} wallpaper" loading="lazy" onerror="this.hidden=true;this.parentElement.classList.add('missing')" /><span>Wallpaper file not found</span>` : '<span class="wallpaper-lock-mark">?</span>'}</span><strong>${escapeHtml(wallpaper.title)}</strong><small>${unlocked ? escapeHtml(wallpaper.file) : 'Locked · enter password'}</small></button>`).join('');
+  secretWallpaperList.innerHTML = defaultWallpaper + imageWallpapers;
 }
 
 function renderSecretPasswordDots() {
   if (!secretPasswordDots) return;
-  secretPasswordDots.innerHTML = secretWallpaperPassword.split('').map((_digit, index) => `<span class="${index < secretPasswordInput.length ? 'filled' : ''}"></span>`).join('');
+  secretPasswordDots.innerHTML = secretPasswordPassword.split('').map((_digit, index) => `<span class="${index < secretPasswordInput.length ? 'filled' : ''}"></span>`).join('');
 }
 
 function openSecretPassword() {
@@ -312,10 +315,10 @@ function submitSecretPasswordDigit(digit) {
   if (secretPasswordOverlay.hidden) return;
   if (digit === 'clear') secretPasswordInput = '';
   else if (digit === 'backspace') secretPasswordInput = secretPasswordInput.slice(0, -1);
-  else if (/^\d$/.test(digit) && secretPasswordInput.length < secretWallpaperPassword.length) secretPasswordInput += digit;
+  else if (/^\d$/.test(digit) && secretPasswordInput.length < secretPasswordPassword.length) secretPasswordInput += digit;
   renderSecretPasswordDots();
-  if (secretPasswordInput.length < secretWallpaperPassword.length) return;
-  if (secretPasswordInput === secretWallpaperPassword) {
+  if (secretPasswordInput.length < secretPasswordPassword.length) return;
+  if (secretPasswordInput === secretPasswordPassword) {
     unlockSecretWallpapers();
     secretPasswordStatus.textContent = 'Unlocked. The wallpapers are yours.';
     secretPasswordStatus.classList.remove('error');
@@ -333,6 +336,15 @@ function submitSecretPasswordDigit(digit) {
 }
 
 function applySecretWallpaper(wallpaperId, notify = true) {
+  if (wallpaperId === 'default') {
+    document.body.classList.remove('secret-wallpaper-active');
+    document.body.style.removeProperty('--secret-wallpaper');
+    try { localStorage.removeItem('stellarmusic-selected-wallpaper'); } catch {}
+    closeSecretPassword();
+    closeSecrets();
+    if (notify) showToast('Default background restored');
+    return;
+  }
   const wallpaper = secretWallpapers.find((item) => item.id === wallpaperId);
   if (!wallpaper || !areSecretWallpapersUnlocked()) return;
   document.body.style.setProperty('--secret-wallpaper', `url("./${wallpaper.file}")`);
@@ -751,8 +763,9 @@ function chineseRadioStation(station, index) {
     duration: 'LIVE',
     art: station.name.slice(0, 2) || `中${index + 1}`,
     artClass: 'radio-art-china',
-    radioUrl: hls || !/^https:/i.test(streamUrl) ? `/api/radio/china/stream/${station.id}` : streamUrl,
+    radioUrl: station.radioUrl || (hls || !/^https:/i.test(streamUrl) ? `/api/radio/china/stream/${station.id}` : streamUrl),
     radioHls: hls,
+    radioDirect: Boolean(station.radioDirect),
     radio: true,
     description: tags || 'Chinese-language live broadcast.',
   };
@@ -762,6 +775,48 @@ function radioQueue() {
   return [...radioStations, ...chineseRadioStations];
 }
 
+function isChineseStation(station) {
+  const languages = `${station.language || ''},${station.languagecodes || ''}`.toLowerCase();
+  return languages.includes('chinese') || languages.split(',').some((value) => ['zh', 'cmn', 'yue'].includes(value.trim())) || /[\u4e00-\u9fff]/.test(station.name || '');
+}
+
+function radioBrowserStation(station, index) {
+  const streamUrl = station.url_resolved || station.url || '';
+  return {
+    id: station.stationuuid,
+    name: String(station.name || '').trim() || `Chinese station ${index + 1}`,
+    state: String(station.state || '').trim(),
+    tags: String(station.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 3),
+    streamUrl,
+    codec: station.codec || 'LIVE',
+    bitrate: station.bitrate || 0,
+    hls: false,
+    radioUrl: streamUrl,
+    radioDirect: true,
+  };
+}
+
+async function loadChineseRadioFromBrowser() {
+  let lastError;
+  for (const mirror of RADIO_BROWSER_MIRRORS) {
+    try {
+      const response = await fetch(`${mirror}/stations/bycountry/China?hidebroken=true&order=votes&reverse=true&limit=1000`);
+      if (!response.ok) throw new Error('Directory unavailable');
+      const stations = await response.json();
+      return stations
+        .filter((station) => station.lastcheckok === 1 && isChineseStation(station))
+        .filter((station) => {
+          const streamUrl = station.url_resolved || station.url || '';
+          return /^https:/i.test(streamUrl) && !station.hls && !/\.m3u8(?:$|[?#])/i.test(streamUrl);
+        })
+        .map(radioBrowserStation);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error('Directory unavailable');
+}
+
 function loadChineseRadio() {
   if (chineseRadioLoadPromise) return chineseRadioLoadPromise;
   chineseRadioLoadPromise = fetch('/api/radio/china')
@@ -769,6 +824,7 @@ function loadChineseRadio() {
       if (!response.ok) throw new Error('Directory unavailable');
       return response.json();
     })
+    .catch(() => loadChineseRadioFromBrowser().then((stations) => ({ stations })))
     .then((payload) => {
       chineseRadioStations = (payload.stations || []).map(chineseRadioStation);
       chineseRadioStations.forEach((station) => radioStationsById.set(station.id, station));
@@ -1268,6 +1324,8 @@ async function playTrack(trackOrId, queue = null) {
   pendingYoutubeTrack = null;
   stopYoutubeProgress();
   const audioSource = getTrackAudioSource(track);
+  if (track.radioDirect) audio.removeAttribute('crossorigin');
+  else audio.setAttribute('crossorigin', 'anonymous');
   setupAudioAnalyser();
   if (track.radio && (track.radioHls || /\.m3u8(?:$|[?#])/i.test(audioSource))) {
     try {
@@ -1373,7 +1431,7 @@ document.addEventListener('click', (event) => {
   }
   const wallpaperTarget = event.target.closest('[data-secret-wallpaper]');
   if (wallpaperTarget) {
-    if (areSecretWallpapersUnlocked()) applySecretWallpaper(wallpaperTarget.dataset.secretWallpaper);
+    if (wallpaperTarget.dataset.secretWallpaper === 'default' || areSecretWallpapersUnlocked()) applySecretWallpaper(wallpaperTarget.dataset.secretWallpaper);
     else openSecretPassword();
     return;
   }
